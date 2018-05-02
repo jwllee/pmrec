@@ -1,6 +1,10 @@
 # pmrec
 PMRec - Next event prediction model adapted from factorization machine
 
+### Package requirements:
+- Standard ML packages: numpy, and pandas
+- Factorization Machine: [fastFM](https://github.com/ibayer/fastFM)
+
 ### How to run code?
 Each experimental configuration is set up as a python script with a suffix of runX.py. For example, to run the experiments for the step size 2, simply execute:
 ```
