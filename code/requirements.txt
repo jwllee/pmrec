@@ -1,0 +1,6 @@
+pm4py
+pandas>=0.24.0
+cython
+matplotlib
+scikit-learn
+fastFM
