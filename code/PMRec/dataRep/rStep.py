@@ -13,6 +13,12 @@ if nb_dir not in sys.path:
 
 import pmRecUtils as rutils
 import logUtils as lutils
+import utils
+
+
+# use MINIMAL_DEBUG for debugging
+logger = utils.make_logger(utils.MINIMAL_DEBUG)
+logger = utils.make_logger(__file__)
 
 
 def partialcase_to_fm_format(caseid, partialcase, stepsz, cid_list, \
@@ -96,13 +102,19 @@ def partialcase_to_fm_format(caseid, partialcase, stepsz, cid_list, \
     x_row_inds = x_row_inds.astype(np.int)
     x_col_inds = x_col_inds.astype(np.int)
 
+    # iterate through boolean list to say which one is the correct prediction
     y_datalist = np.asarray([np.int(step) for step in samples == to_predict], \
                             dtype=np.int)
 
     pred_id_list = np.ones(len(y_datalist)) * pred_id
 
+
+    logger.debug('y_datalist: {}'.format(y_datalist))
+    logger.debug('Samples: {}'.format(samples))
+    logger.debug('Number of y_datalist: {}'.format(pred_id_list.shape[0]))
+
     return x_datalist, x_row_inds, x_col_inds, x_shape, \
-            y_datalist, pred_id_list
+            y_datalist, pred_id_list, samples
 
 
 def case_to_fm_format(caseid, case, stepsz, cid_list, step_dict, \
@@ -118,18 +130,21 @@ def case_to_fm_format(caseid, case, stepsz, cid_list, step_dict, \
     y_datalist = list()
 
     pred_id_list = list()
+    sample_list = list()
 
     # need to have minpartialsz plus one to predict
     if case.shape[0] <= minpartialsz:
+        raise ValueError('Case length less than minimum length: {}'.format(minpartialsz))
         return np.asarray(x_datalist), np.asarray(x_row_inds), \
                 np.asarray(x_col_inds), x_shape, \
-                np.asarray(y_datalist), np.asarray(pred_id_list)
+                np.asarray(y_datalist), np.asarray(pred_id_list), \
+               np.asarray(sample_list)
 
     for ind in range(minpartialsz, case.shape[0] + 1):
         partialcase = case[:ind]
 #        print('building for partial case: {}'.format(partialcase))
         x_datalist_i, x_row_inds_i, x_col_inds_i, x_shape_i, \
-                y_datalist_i, pred_id_list_i = \
+                y_datalist_i, pred_id_list_i, sample_list_i = \
                 partialcase_to_fm_format(caseid, partialcase, \
                                          stepsz, cid_list, \
                                          step_dict, next_step_mapping, \
@@ -143,6 +158,7 @@ def case_to_fm_format(caseid, case, stepsz, cid_list, step_dict, \
             x_shape = x_shape_i
             y_datalist = y_datalist_i
             pred_id_list = pred_id_list_i
+            sample_list = sample_list_i
         else:
             x_row_inds_i += x_shape[0]
 
@@ -152,13 +168,14 @@ def case_to_fm_format(caseid, case, stepsz, cid_list, step_dict, \
             x_shape = np.asarray((x_shape[0] + x_shape_i[0], x_shape[1]))
             y_datalist = np.concatenate((y_datalist, y_datalist_i))
             pred_id_list = np.concatenate((pred_id_list, pred_id_list_i))
+            sample_list = np.concatenate((sample_list, sample_list_i))
 
         # update pred_id
         if len(pred_id_list) > 0:
             pred_id = pred_id_list[-1] + 1
 
     return x_datalist, x_row_inds, x_col_inds, x_shape, \
-            y_datalist, pred_id_list
+            y_datalist, pred_id_list, sample_list
 
 
 
@@ -174,6 +191,7 @@ def log_to_fm_format(log, stepsz, cid_list, step_dict, next_step_mapping, \
     y_datalist = list()
 
     pred_id_list = list()
+    sample_list = list()
 
     log_caseids = log['caseId'].unique()
     log_caseids.sort()
@@ -182,7 +200,7 @@ def log_to_fm_format(log, stepsz, cid_list, step_dict, next_step_mapping, \
 #        print('Building for case: {}'.format(cid))
         case = log[(log['caseId']==cid)]['activity'].values
         x_datalist_i, x_row_inds_i, x_col_inds_i, x_shape_i, \
-                y_datalist_i, pred_id_list_i = \
+                y_datalist_i, pred_id_list_i, sample_list_i = \
                 case_to_fm_format(cid, case, stepsz, cid_list, \
                                   step_dict, next_step_mapping, \
                                   minpartialsz, negative_samples, \
@@ -194,6 +212,7 @@ def log_to_fm_format(log, stepsz, cid_list, step_dict, next_step_mapping, \
             x_shape = x_shape_i
             y_datalist = y_datalist_i
             pred_id_list = pred_id_list_i
+            sample_list = sample_list_i
         else:
             # shift by rows
             x_row_inds_i += x_shape[0]
@@ -204,11 +223,12 @@ def log_to_fm_format(log, stepsz, cid_list, step_dict, next_step_mapping, \
             x_shape = np.asarray((x_shape[0] + x_shape_i[0], x_shape[1]))
             y_datalist = np.concatenate((y_datalist, y_datalist_i))
             pred_id_list = np.concatenate((pred_id_list, pred_id_list_i))
+            sample_list = np.concatenate((sample_list, sample_list_i))
 
         # update pred_id
         if len(pred_id_list) > 0:
             pred_id = pred_id_list[-1] + 1
 
     return x_datalist, x_row_inds, x_col_inds, x_shape, \
-            y_datalist, pred_id_list
+            y_datalist, pred_id_list, sample_list
 
