@@ -90,6 +90,7 @@ def run(log_fp):
     train_y = train_y_datalist
 
     logger.info('Build test FM csc_matrix...')
+    logger.debug('Test caseids: {}'.format(test_df['caseId'].unique()))
     test_formatted = rStep.log_to_fm_format(test_df, stepsz, cid_list,
                                             step_dict, next_step_mapping,
                                             negative_samples=-1)
@@ -142,7 +143,7 @@ def run(log_fp):
     grouped = pred_df.groupby('pred_id', as_index=False)
     k = 1
     top_k_pred_df = grouped.apply(lambda df: df.nlargest(k, columns='pred_y'))
-    logger.debug('Top {} predictions: \n{}'.format(k, top_k_pred_df.head()))
+    logger.debug('Top {} predictions: \n{}'.format(k, top_k_pred_df.head(20)))
     acc = top_k_pred_df['test_y'].sum() / top_k_pred_df.shape[0] * 100.
     logger.debug('Accuracy: {:.2f}%'.format(acc))
 
